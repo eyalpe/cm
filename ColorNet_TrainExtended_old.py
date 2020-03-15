@@ -2,6 +2,8 @@ import numpy as np
 import os
 import cv2
 import shutil
+import platform
+import k2tf
 
 import tensorflow as tf
 from tensorflow.python.tools import freeze_graph
@@ -45,13 +47,14 @@ def confusion_matrix(model, testSet):
     conf /= size_matrix
     return conf
 
+if(platform.system()=="Windows"):
+    dataPrePath = r"e:\\projects\\MB\\ColorNitzan\\ATR\\"
+    outputPath = r"e:\\projects\\MB\\ColorNitzan\\TFexample\\outColorNetOutputs_30_01_20\\"
+else:
+    if(os.getlogin()=='borisef'):
+        dataPrePath = "/media/borisef/d1e28558-1377-4bbb-9e48-c8900feaf59d/ColorNitzan/ATR/"
+        outputPath = "/home/borisef/projects/cm/Output/outColorNetOutputs_08_03_20_full"
 
-dataPrePath = r"e:\\projects\\MB\\ColorNitzan\\ATR\\"
-outputPath = r"e:\\projects\\MB\\ColorNitzan\\TFexample\\outColorNetOutputs_30_01_20\\"
-
-
-dataPrePath = "/media/borisef/d1e28558-1377-4bbb-9e48-c8900feaf59d/ColorNitzan/ATR/"
-outputPath = "/media/borisef/d1e28558-1377-4bbb-9e48-c8900feaf59d/ColorNitzan/TFexample/outColorNetOutputs_08_03_20/"
 
 
 if os.path.exists(outputPath):
@@ -64,17 +67,19 @@ frozen_dir = os.path.join(outputPath,"frozen")
 model_n_ckpt_dir = os.path.join(outputPath,"model")
 ckpt_dir = os.path.join(model_n_ckpt_dir,"checkpoint")
 h5_dir = os.path.join(outputPath,"h5")
+k2tf_dir = os.path.join(outputPath,"k2tf")
 
 os.mkdir(model_n_ckpt_dir)
 os.mkdir(stat_save_dir)
 os.mkdir(ckpt_dir)
 os.mkdir(frozen_dir)
 os.mkdir(h5_dir)
+os.mkdir(k2tf_dir)
 
 
 
-trainSet = chenColorDataset(os.path.join(dataPrePath, 'Database_clean_unified_augmented4mini'), gamma_correction=False)
-testSet = chenColorDataset(os.path.join(dataPrePath, 'Database_with_MB/testset'), gamma_correction=False)
+trainSet = chenColorDataset(os.path.join(dataPrePath, r'Database_clean_unified_augmented4'), gamma_correction=False)
+testSet = chenColorDataset(os.path.join(dataPrePath, r'Database_with_MB/testset'), gamma_correction=False)
 dataSetHistogram(trainSet.allData['labels'], trainSet.hotEncodeReverse, os.path.join(stat_save_dir,"hist.png"))
 
 #Model Architecture
@@ -127,21 +132,24 @@ tf.saved_model.simple_save(tf.keras.backend.get_session(),
 # Saver
 saver.save(tf.keras.backend.get_session(), os.path.join(ckpt_dir,"train.ckpt"))
 
-freeze_graph.freeze_graph(None,
-                          None,
-                          None,
-                          None,
-                          model.outputs[0].op.name,
-                          None,
-                          None,
-                          os.path.join(frozen_dir, "frozen_cmodel.pb"),
-                          False,
-                          "",
-                          input_saved_model_dir=simple_save_dir)
-
-
-#save model
 try:
+    freeze_graph.freeze_graph(None,
+                              None,
+                              None,
+                              None,
+                              model.outputs[0].op.name,
+                              None,
+                              None,
+                              os.path.join(frozen_dir, "frozen_cmodel.pb"),
+                              False,
+                              "",
+                              input_saved_model_dir=simple_save_dir)
+
+except:
+    print("freeze_graph.freeze_graph FAILED")
+
+try:
+    #save model
     model.save(os.path.join(frozen_dir, 'color_classification_smaller_ALL_DATA'), save_format='tf')
 except:
     try:
@@ -153,12 +161,16 @@ print(model.outputs)
 print(model.inputs)
 
 try:
-    frozen_graph1 = freezeUtils.freeze_session(K.get_session(),output_names=[out.op.name for out in model.outputs])
+    frozen_graph1 = freezeUtils.freeze_session(K.get_session(),
+                                   output_names=[out.op.name for out in model.outputs])
 except:
     print("frozen_graph1 = freezeUtils.freeze_session...  FAILED")
 
 # Save to ./model/tf_model.pb
-tf.train.write_graph(frozen_graph1, "model", "tf_model.pb", as_text=False)
+try:
+    tf.train.write_graph(frozen_graph1, "model", "tf_model.pb", as_text=False)
+except:
+    print("tf.train.write_graph(frozen_graph1..  FAILED")
 
 
 try:
@@ -172,6 +184,14 @@ try:
 
 except:
     print("2tf.convertGraph  FAILED")
+
+
+
+
+
+
+
+
 
 
 

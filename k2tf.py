@@ -95,10 +95,11 @@ if __name__ == '__main__':
 
     #convertGraph(args.model, args.outdir, args.num_out, args.prefix, args.name)
 
-    args_model = 'e:/projects/MB/ColorNitzan/TFexample/outColorNetOutputs_30_01_20/h5/color_classification_smaller_ALL_DATA.h5'
+    args_model = '/media/borisef/3734-6230/projects/cm/Output/outColorNetOutputs_05_02_20/h5/color_classification_smaller_ALL_DATA.h5'
+   # args_model = '/media/borisef/3734-6230/projects/cm/Output/outColorNetOutputs_05_02_20/h5/color_classification_smaller_ALL_DATA.h5'
     #args_model = "e:/projects/MB/ColorNitzan/TFexample/color_classification_smaller_ALL_DATA.h5"
     args_num_out = 1
-    args_outdir = "./"
+    args_outdir = "/media/borisef/3734-6230/projects/cm/Output/outColorNetOutputs_05_02_20/"
     args_prefix = "k2tfout"
     args_name = "output_graph.pb"
 
