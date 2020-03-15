@@ -10,6 +10,8 @@ from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Convolu
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras import backend as K
 
+import k2tf
+
 from jointDataset import chenColorDataset, dataSetHistogram
 import datetime
 
@@ -64,12 +66,14 @@ frozen_dir = os.path.join(outputPath,"frozen")
 model_n_ckpt_dir = os.path.join(outputPath,"model")
 ckpt_dir = os.path.join(model_n_ckpt_dir,"checkpoint")
 h5_dir = os.path.join(outputPath,"h5")
+k2tf_dir =  os.path.join(outputPath,"k2tf_dir")
 
 os.mkdir(model_n_ckpt_dir)
 os.mkdir(stat_save_dir)
 os.mkdir(ckpt_dir)
 os.mkdir(frozen_dir)
 os.mkdir(h5_dir)
+os.mkdir(k2tf_dir)
 
 
 
@@ -102,9 +106,11 @@ model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accurac
 
 saver = tf.train.Saver()
 
-with open(os.path.join(model_n_ckpt_dir,'model.pb'), 'wb') as f:
-    f.write(tf.keras.backend.get_session().graph_def.SerializeToString())
-
+try:
+    with open(os.path.join(model_n_ckpt_dir,'model.pb'), 'wb') as f:
+        f.write(tf.keras.backend.get_session().graph_def.SerializeToString())
+except:
+    print("failed model n ckpt ")
 
 model.fit(trainSet.allData['images'], trainSet.allData['labels'], batch_size=256, nb_epoch=5, verbose=1)
 t0 = now()
@@ -113,32 +119,38 @@ dt = now()-t0
 print("Score: {}, evaluation time: {}, time_per_image: {}".format(test_acc, dt, dt/len(testSet.allData['labels'])))
 
 #save model
-model.save(os.path.join(h5_dir,'color_classification_smaller_ALL_DATA.h5'))
+try:
+    model.save(os.path.join(h5_dir,'color_classification_smaller_ALL_DATA.h5'))
+except:
+    print("failed h5_dir")
 
-
-
-tf.saved_model.simple_save(tf.keras.backend.get_session(),
-                           simple_save_dir,
-                           inputs={"input": model.inputs[0]},
-                           outputs={"output": model.outputs[0]})
-
+try:
+    tf.saved_model.simple_save(tf.keras.backend.get_session(),
+                               simple_save_dir,
+                               inputs={"input": model.inputs[0]},
+                               outputs={"output": model.outputs[0]})
+except:
+    print("failed simple_save_dir")
 
 
 # Saver
-saver.save(tf.keras.backend.get_session(), os.path.join(ckpt_dir,"train.ckpt"))
+try:
+    saver.save(tf.keras.backend.get_session(), os.path.join(ckpt_dir,"train.ckpt"))
+except:
+    print("failed ckpt_dir")
 
-freeze_graph.freeze_graph(None,
-                          None,
-                          None,
-                          None,
-                          model.outputs[0].op.name,
-                          None,
-                          None,
-                          os.path.join(frozen_dir, "frozen_cmodel.pb"),
-                          False,
-                          "",
-                          input_saved_model_dir=simple_save_dir)
-
+try:
+    freeze_graph.freeze_graph(None,
+                              None,
+                              None,
+                              None,
+                              model.outputs[0].op.name,
+                              None,
+                              None,
+                              os.path.join(frozen_dir, "frozen_cmodel.pb"),
+                              False,
+                              "",
+                              input_saved_model_dir=simple_save_dir)
 
 #save model
 try:
@@ -153,12 +165,26 @@ print(model.outputs)
 print(model.inputs)
 
 try:
-    frozen_graph1 = freezeUtils.freeze_session(K.get_session(),output_names=[out.op.name for out in model.outputs])
-except:
-    print("frozen_graph1 = freezeUtils.freeze_session...  FAILED")
+    frozen_graph1 = freezeUtils.freeze_session(K.get_session(),
+                                   output_names=[out.op.name for out in model.outputs])
 
-# Save to ./model/tf_model.pb
-tf.train.write_graph(frozen_graph1, "model", "tf_model.pb", as_text=False)
+    # Save to ./model/tf_model.pb
+    tf.train.write_graph(frozen_graph1, "model", "tf_model.pb", as_text=False)
+except:
+    print("failed frozen_graph1")
+
+try:
+    h5file = os.path.join(frozen_dir, 'color_classification_smaller_ALL_DATA.h5')
+    args_model = h5file
+    args_num_out = 1
+    args_outdir = k2tf_dir
+    args_prefix = "k2tfout"
+    args_name = "output_graph.pb"
+    k2tf.convertGraph(args_model, args_outdir, args_num_out, args_prefix, args_name)
+except:
+    print("failed k2tf_dir")
+
+
 
 
 try:
