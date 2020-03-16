@@ -137,16 +137,12 @@ class mbColorDataset:
         return self.hotEncodeReverse[list(label).index(1)]
 
 
-
-
-
-
-
-
-
-
 class chenColorDataset:
-    def __init__(self, path_to_data, image_format='tif', image_resolution=(128,128),trainSetPercentage=0.6, validationSetPercentage=0, normalize_pixel_values=True, change_dtype_to_float32=True, gamma_correction=False):
+    hotEncode = {'white': 0, 'black': 1, 'gray': 2, 'red': 3, 'green': 4, 'blue': 5, 'yellow': 6, 'cyan': 5}
+    hotEncodeReverse = {v: k for (k,v) in hotEncode.items()}
+    def __init__(self, path_to_data, image_format='tif', image_resolution=(128, 128), train_set_percentage=0.6,
+                 validation_set_percentage=0, normalize_pixel_values=True, change_dtype_to_float32=True,
+                 gamma_correction=False, verbose=False):
         self.path = path_to_data
         self.image_format = image_format
         self.image_resolution = image_resolution
@@ -159,10 +155,8 @@ class chenColorDataset:
         #####Hot_Encoding For Color####
         self.WHITE = 0; self.BLACK = 1; self.GRAY = 2; self.RED = 3; self.GREEN = 4; self.BLUE = 5
         self.YELLOW = 6; self.CYAN = 7
-        self.hotEncode = {'white': 0, 'black': 1, 'gray': 2, 'red': 3, 'green': 4, 'blue': 5,
-                          'yellow': 6, 'cyan': 5}
-        self.hotEncodeReverse = {0: 'white', 1: 'black', 2: 'gray', 3: 'red', 4: 'green', 5: 'blue',
-                                 6: 'yellow'}
+        self.hotEncode = chenColorDataset.hotEncode
+        self.hotEncodeReverse = chenColorDataset.hotEncodeReverse
         ####create dataset variables####
         self.allData = {'images': [], 'labels': []}
         ####load dataset#####
@@ -182,13 +176,16 @@ class chenColorDataset:
                 self.allData['images'].append(im)
                 #except:
                     #os.remove(dstPath)
-                print ("folder {}({}/{}):   {} images loaded out of {}".format(folder, idx, len(folderList), idx2, len(fileList)))
+                if verbose:
+                    print ("folder {}({}/{}):\t{} images loaded out of {}".format(folder, idx, len(folderList),
+                                                                                   idx2, len(fileList)))
+            print("folder {}({}/{}): {} images loaded.".format(folder, idx, len(folderList), len(fileList)))
         print("Dataset loading complete")
 
         ####Randomly select data for train, test and validation sets####
         #Shuffle Data
         randperm = np.random.permutation(np.arange(len(self.allData['images'])))
-        trainIdx = int(trainSetPercentage*len(self.allData['images']))
+        trainIdx = int(train_set_percentage * len(self.allData['images']))
         self.allData['images'] = np.array(self.allData['images'])[randperm]
         if change_dtype_to_float32:
             self.allData['images'] = self.allData['images'].astype('float32')
@@ -206,8 +203,8 @@ class chenColorDataset:
         #####create sets#####
         self.trainSet = {'images': self.allData['images'][:trainIdx],'labels': self.allData['labels'][:trainIdx]}
         self._num_examples_train = len(self.trainSet['images'])
-        if validationSetPercentage != 0:
-            validationIdx = int((trainSetPercentage + validationSetPercentage)*len(self.allData['images']))
+        if validation_set_percentage != 0:
+            validationIdx = int((train_set_percentage + validation_set_percentage)*len(self.allData['images']))
             self.validationSet = {'images': self.allData['images'][trainIdx:validationIdx],
                                   'labels': self.allData['labels'][trainIdx:validationIdx]}
             self.testSet = {'images': self.allData['images'][validationIdx:], 'labels': self.allData['labels'][validationIdx:]}
