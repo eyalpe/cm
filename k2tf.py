@@ -56,12 +56,8 @@ def convertGraph(modelPath, outdir, numoutputs, prefix, name):
 
     net_model = load_model(modelPath)
 
-    # Alias the outputs in the model - this sometimes makes them easier to access in TF
-    pred = [None] * numoutputs
-    pred_node_names = [None] * numoutputs
-    for i in range(numoutputs):
-        pred_node_names[i] = prefix + '_' + str(i)
-        pred[i] = tf.identity(net_model.output[i], name=pred_node_names[i])
+    pred = net_model.outputs
+    pred_node_names = [node.name.split(':')[0] for node in pred]
     print('Output nodes names are: ', pred_node_names)
 
     sess = K.get_session()
@@ -75,6 +71,10 @@ def convertGraph(modelPath, outdir, numoutputs, prefix, name):
     from tensorflow.python.framework import graph_util
     from tensorflow.python.framework import graph_io
     constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), pred_node_names)
+    f = 'const_graph_def_for_reference.pb.ascii'
+    graph_io.write_graph(constant_graph, outdir, f, as_text=True)
+    print('Saved the constant graph definition in ascii format at: ', osp.join(outdir, f))
+
     graph_io.write_graph(constant_graph, outdir, name, as_text=False)
     print('Saved the constant graph (ready for inference) at: ', osp.join(outdir, name))
 
