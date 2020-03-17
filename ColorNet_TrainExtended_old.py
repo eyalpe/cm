@@ -206,6 +206,25 @@ def save_model(model, dirs):
         print("2tf.convertGraph  FAILED")
 
 
+def load_datasets(dataPrePath, stat_save_dir):
+    trainSet = chenColorDataset(os.path.join(dataPrePath, r'Database_clean_unified_augmented4mini'), gamma_correction=False)
+    testSet = chenColorDataset(os.path.join(dataPrePath, r'Database_with_MB/testset'), gamma_correction=False)
+    dataSetHistogram(trainSet.allData['labels'], trainSet.hotEncodeReverse, os.path.join(stat_save_dir,"hist.png"))
+    return trainSet, testSet, dataSetHistogram
+
+
+def train_model(model, trainSet, testSet):
+    t0 = time.perf_counter()
+    model.fit(trainSet.allData['images'], trainSet.allData['labels'], batch_size=256, nb_epoch=5, verbose=1)
+    t_train = time.perf_counter() - t0
+    print("Model train took: {} ".format(t_train))
+    t0 = time.perf_counter()
+    test_loss, test_acc = model.evaluate(testSet.allData['images'], testSet.allData['labels'], verbose=0)
+    t_test = time.perf_counter() - t0
+    print("Score: {}, evaluation time: {}, time_per_image: {}".format(test_acc, t_test,
+                                                                      t_test / len(testSet.allData['labels'])))
+
+
 def run(show_results_mode=False):
     dataPrePath, outputPath = init_paths()
     dirs = mk_out_dirs(outputPath)
@@ -219,26 +238,17 @@ def run(show_results_mode=False):
     h5_dir           = dirs['h5_dir']
     k2tf_dir         = dirs['k2tf_dir']
 
-    # generate datasets:
-    #perf
-    trainSet = chenColorDataset(os.path.join(dataPrePath, r'Database_clean_unified_augmented4mini'), gamma_correction=False)
-    testSet = chenColorDataset(os.path.join(dataPrePath, r'Database_with_MB/testset'), gamma_correction=False)
-    dataSetHistogram(trainSet.allData['labels'], trainSet.hotEncodeReverse, os.path.join(stat_save_dir,"hist.png"))
-
     model = build_nn_model()
+
+    # generate datasets:
+    trainSet, testSet, dataSetHistogram = load_datasets(dataPrePath, stat_save_dir)
 
     # save model architecture:
     with open(os.path.join(model_n_ckpt_dir,'model.pb'), 'wb') as f:
         f.write(tf.keras.backend.get_session().graph_def.SerializeToString())
 
-    t0 = time.perf_counter()
-    model.fit(trainSet.allData['images'], trainSet.allData['labels'], batch_size=256, nb_epoch=5, verbose=1)
-    t_train = time.perf_counter() - t0
-    print("Model train took: {} ".format(t_train))
-    t0 = time.perf_counter()
-    test_loss, test_acc = model.evaluate(testSet.allData['images'], testSet.allData['labels'], verbose=0)
-    t_test = time.perf_counter() - t0
-    print("Score: {}, evaluation time: {}, time_per_image: {}".format(test_acc, t_test, t_test/len(testSet.allData['labels'])))
+    # train the model:
+    train_model(model, trainSet, testSet)
 
     # save the trained model in various formats ...
     save_model(model, dirs)
